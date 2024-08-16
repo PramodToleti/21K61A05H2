@@ -1,4 +1,3 @@
-const { default: axios } = require("axios");
 const apiConfig = require("../apiConfig");
 
 const getProductsByCategory = async (req, res) => {
@@ -20,26 +19,22 @@ const getProductsByCategory = async (req, res) => {
   try {
     const companies = ["AMZ", "FLP", "SNP", "MYN", "AZO"];
 
-    const promises = companies.map((company) => {
-      return apiConfig.getProductsByCategory(
+    const products = companies.map(async (company) => {
+      const res = await apiConfig.getProductsByCategory(
         `/companies/${company}/categories/${categoryname}/products?top=${n}&minPrice=1&maxPrice=10000`
       );
+
+      const data = res.data.map((product) => {
+        return {
+          id: company + "-" + categoryname + "-" + product.productName,
+          ...product,
+        };
+      });
+
+      return data;
     });
 
-    const responses = await Promise.all(promises);
-
-    let formatedData = [];
-
-    responses.forEach((response) => {
-      formatedData = formatedData.concat(...response.data);
-    });
-
-    formatedData = formatedData.map((product, index) => {
-      return {
-        id: index + 1,
-        ...product,
-      };
-    });
+    let formatedData = await Promise.all(products);
 
     if (sortBy) {
       for (let i = 0; i < formatedData.length; i++) {
@@ -78,6 +73,35 @@ const getProductsByCategory = async (req, res) => {
   }
 };
 
+const getProductDetails = async (req, res) => {
+  const { categoryname, productid } = req.params;
+  console.log(categoryname, productid);
+
+  try {
+    const [company, categoryname, productName] = productid.split("-");
+    const response = await apiConfig.getProductsByCategory(
+      `/companies/${company}/categories/${categoryname}/products?top=100&minPrice=1&maxPrice=10000`
+    );
+
+    const product = response.data.find(
+      (product) =>
+        company + "-" + categoryname + "-" + product.productName === productid
+    );
+
+    if (!product) {
+      return res.status(404).json({
+        error: "Product not found",
+      });
+    }
+
+    res.status(200).json(product);
+  } catch (error) {
+    console.log(error);
+    res.status(500).send("Internal Server Error");
+  }
+};
+
 module.exports = {
   getProductsByCategory,
+  getProductDetails,
 };
