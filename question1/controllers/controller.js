@@ -19,7 +19,9 @@ const getProductsByCategory = async (req, res) => {
   try {
     const companies = ["AMZ", "FLP", "SNP", "MYN", "AZO"];
 
-    const products = companies.map(async (company) => {
+    let formatedData = [];
+
+    for (const company of companies) {
       const res = await apiConfig.getProductsByCategory(
         `/companies/${company}/categories/${categoryname}/products?top=${n}&minPrice=1&maxPrice=10000`
       );
@@ -31,10 +33,8 @@ const getProductsByCategory = async (req, res) => {
         };
       });
 
-      return data;
-    });
-
-    let formatedData = await Promise.all(products);
+      formatedData.push(...data);
+    }
 
     if (sortBy) {
       for (let i = 0; i < formatedData.length; i++) {
@@ -61,9 +61,7 @@ const getProductsByCategory = async (req, res) => {
     if (n > 10 && page) {
       const start = (page - 1) * 10;
       const end = page * 10;
-      console.log(start, end);
       formatedData = formatedData.slice(start, end);
-      console.log(formatedData);
     }
 
     res.status(200).json(formatedData);
